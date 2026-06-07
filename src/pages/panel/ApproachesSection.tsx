@@ -1,7 +1,8 @@
 import React from 'react';
-import { ApproachCard } from '../../components/ApproachCard';
-import { useProblemAnalysis } from '../../hooks/useProblemAnalysis';
-import type { LeetCodeProblem } from '../../types';
+import { ApproachCard } from '@/components/ApproachCard';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
+import { useProblemAnalysis } from '@/hooks/useProblemAnalysis';
+import type { LeetCodeProblem } from '@/types';
 
 interface ApproachesSectionProps {
   problem: LeetCodeProblem;
@@ -12,20 +13,15 @@ export const ApproachesSection: React.FC<ApproachesSectionProps> = ({
 }) => {
   const { status, analysis, error, refresh } = useProblemAnalysis(problem);
 
-  return (
-    <section className="bg-gray-800/40 border border-gray-700/40 rounded-lg p-3">
-      <header className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span>🗺️</span>
-          <h3 className="text-xs font-semibold text-gray-200">Approaches</h3>
-        </div>
-        {status === 'ready' && analysis && (
-          <span className="text-[10px] text-gray-500">
-            {analysis.approaches.length} found
-          </span>
-        )}
-      </header>
+  const badge =
+    status === 'loading'
+      ? '…'
+      : status === 'ready' && analysis
+        ? `${analysis.approaches.length} found`
+        : null;
 
+  return (
+    <CollapsibleSection emoji="🗺️" title="Approaches" badge={badge}>
       {status === 'idle' && (
         <p className="text-[11px] text-gray-500">Waiting for problem…</p>
       )}
@@ -57,7 +53,7 @@ export const ApproachesSection: React.FC<ApproachesSectionProps> = ({
       )}
 
       {status === 'ready' && analysis && (
-        <div className="flex flex-col gap-2 animate-fade-in">
+        <div className="flex flex-col gap-2">
           {analysis.approaches.map((a) => (
             <ApproachCard key={a.id} approach={a} />
           ))}
@@ -66,13 +62,9 @@ export const ApproachesSection: React.FC<ApproachesSectionProps> = ({
           </p>
         </div>
       )}
-    </section>
+    </CollapsibleSection>
   );
 };
-
-// ─────────────────────────────────────────────
-// Subcomponents
-// ─────────────────────────────────────────────
 
 const LoadingState: React.FC = () => (
   <div className="flex flex-col items-center justify-center gap-2 py-4">
