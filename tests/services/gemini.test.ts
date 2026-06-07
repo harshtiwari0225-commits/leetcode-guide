@@ -1,0 +1,210 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mock the @google/generative-ai module BEFORE importing the service.
+const mockGenerateContent = vi.fn();
+vi.mock('@google/generative-ai', () => {
+  class GoogleGenerativeAI {
+    getGenerativeModel() {
+      return { generateContent: mockGenerateContent };
+    }
+  }
+  return { GoogleGenerativeAI };
+});
+
+import {
+  analyzeProblem,
+  containsCode,
+  GeminiKeyMissingError,
+  GeminiValidationError,
+  parseAnalysisResponse,
+} from '@/services/gemini';
+import { setApiKey, clearApiKey } from '@/services/storage';
+import type { LeetCodeProblem } from '@/types';
+
+const mockProblem: LeetCodeProblem = {
+  id: 'two-sum',
+  title: 'Two Sum',
+  difficulty: 'Easy',
+  tags: ['Array', 'Hash Table'],
+  description:
+    'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.',
+  examples: ['Input: nums = [2,7,11,15], target = 9\nOutput: [0,1]'],
+  constraints: ['2 <= nums.length <= 10^4'],
+  url: 'https://leetcode.com/problems/two-sum/',
+};
+
+const goodPayload = {
+  approaches: [
+    {
+      name: 'Brute Force',
+      technique: 'Nested Loops',
+      type: 'Brute Force',
+      timeComplexity: 'O(n^2)',
+      spaceComplexity: 'O(1)',
+      description: 'Check every pair of numbers to see if they add up to the target.',
+      difficultyScore: 1,
+    },
+    {
+      name: 'Hash Map',
+      technique: 'Hash Table',
+      type: 'Optimal',
+      timeComplexity: 'O(n)',
+      spaceComplexity: 'O(n)',
+      description:
+        'Store seen numbers in a hash map and look up the complement in constant time.',
+      difficultyScore: 2,
+    },
+  ],
+};
+
+beforeEach(async () => {
+  mockGenerateContent.mockReset();
+  await clearApiKey();
+});
+
+describe('containsCode', () => {
+  it('flags triple backticks', () => {
+    expect(containsCode('See the example: ```python ... ```')).toContain('code fence');
+  });
+
+  it('flags language keywords', () => {
+    expect(containsCode('def two_sum(nums, target):')).toContain('def');
+    expect(containsCode('function twoSum(nums) { ... }')).toContain('function');
+    expect(containsCode('return nums[i]')).toContain('return');
+  });
+
+  it('flags assignment statements', () => {
+    expect(containsCode('seen = {}')).toContain('assignment');
+  });
+
+  it('passes plain English explanations', () => {
+    expect(
+      containsCode(
+        'Use a hash map to store values you have seen and check the complement.',
+      ),
+    ).toBeNull();
+    expect(containsCode('Iterate through the array once.')).toBeNull();
+  });
+});
+
+describe('parseAnalysisResponse', () => {
+  it('parses a clean JSON response', () => {
+    const out = parseAnalysisResponse(mockProblem, JSON.stringify(goodPayload));
+    expect(out.approaches).toHaveLength(2);
+    expect(out.approaches[0].name).toBe('Brute Force');
+    expect(out.approaches[0].id).toBeTruthy();
+    expect(out.problem.id).toBe('two-sum');
+  });
+
+  it('parses JSON wrapped in ```json fences', () => {
+    const wrapped = '```json\n' + JSON.stringify(goodPayload) + '\n```';
+    const out = parseAnalysisResponse(mockProblem, wrapped);
+    expect(out.approaches).toHaveLength(2);
+  });
+
+  it('throws GeminiValidationError on invalid JSON', () => {
+    expect(() => parseAnalysisResponse(mockProblem, 'not json at all')).toThrow(
+      GeminiValidationError,
+    );
+  });
+
+  it('throws when approaches array is missing', () => {
+    expect(() =>
+      parseAnalysisResponse(mockProblem, JSON.stringify({ foo: 'bar' })),
+    ).toThrow(GeminiValidationError);
+  });
+
+  it('drops approaches that contain code', () => {
+    const bad = {
+      approaches: [
+        ...goodPayload.approaches,
+        {
+          name: 'Sneaky',
+          technique: 'X',
+          type: 'Advanced',
+          timeComplexity: 'O(n)',
+          spaceComplexity: 'O(1)',
+          description: 'def twoSum(nums, target): return [i, j]',
+          difficultyScore: 3,
+        },
+      ],
+    };
+    const out = parseAnalysisResponse(mockProblem, JSON.stringify(bad));
+    expect(out.approaches).toHaveLength(2);
+    expect(out.approaches.map((a) => a.name)).not.toContain('Sneaky');
+  });
+
+  it('throws if fewer than 2 valid approaches survive', () => {
+    const bad = {
+      approaches: [
+        {
+          name: 'Only One',
+          technique: 'X',
+          type: 'Optimal',
+          timeComplexity: 'O(n)',
+          spaceComplexity: 'O(1)',
+          description: 'Use a hash set.',
+          difficultyScore: 2,
+        },
+      ],
+    };
+    expect(() => parseAnalysisResponse(mockProblem, JSON.stringify(bad))).toThrow(
+      GeminiValidationError,
+    );
+  });
+
+  it('caps approaches at 5', () => {
+    const many = {
+      approaches: Array.from({ length: 8 }, (_, i) => ({
+        name: `Approach ${i}`,
+        technique: 'Technique',
+        type: 'Optimal',
+        timeComplexity: 'O(n)',
+        spaceComplexity: 'O(1)',
+        description: 'Plain english description of an approach.',
+        difficultyScore: 2,
+      })),
+    };
+    const out = parseAnalysisResponse(mockProblem, JSON.stringify(many));
+    expect(out.approaches).toHaveLength(5);
+  });
+});
+
+describe('analyzeProblem', () => {
+  it('throws GeminiKeyMissingError when no key is configured', async () => {
+    await expect(analyzeProblem(mockProblem)).rejects.toThrow(GeminiKeyMissingError);
+  });
+
+  it('returns analysis when SDK responds correctly', async () => {
+    await setApiKey('FAKE');
+    mockGenerateContent.mockResolvedValueOnce({
+      response: { text: () => JSON.stringify(goodPayload) },
+    });
+    const out = await analyzeProblem(mockProblem);
+    expect(out.approaches).toHaveLength(2);
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries once on transient error then succeeds', async () => {
+    await setApiKey('FAKE');
+    mockGenerateContent
+      .mockRejectedValueOnce(new Error('network blip'))
+      .mockResolvedValueOnce({
+        response: { text: () => JSON.stringify(goodPayload) },
+      });
+    const out = await analyzeProblem(mockProblem);
+    expect(out.approaches).toHaveLength(2);
+    expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry on validation errors', async () => {
+    await setApiKey('FAKE');
+    mockGenerateContent.mockResolvedValue({
+      response: { text: () => 'totally not json' },
+    });
+    await expect(analyzeProblem(mockProblem)).rejects.toThrow(
+      GeminiValidationError,
+    );
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+  });
+});

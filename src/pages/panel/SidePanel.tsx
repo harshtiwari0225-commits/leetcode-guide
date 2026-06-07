@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { cn, difficultyBgColor, difficultyColor, truncate } from '@/utils/helpers';
+import { ApproachesSection } from './ApproachesSection';
 import type { LeetCodeProblem } from '@/types';
 
 interface SidePanelProps {
@@ -143,11 +144,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
 
           {problem && (
             <div className="flex flex-col gap-3 animate-fade-in">
-              <SectionPlaceholder
-                emoji="🗺️"
-                title="Approaches"
-                body="Coming in M2 — AI-identified solution approaches (no spoilers)."
-              />
+              <ApproachesSection problem={problem} />
               <SectionPlaceholder
                 emoji="💡"
                 title="Progressive hints"
