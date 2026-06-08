@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { cn, difficultyBgColor, difficultyColor, truncate } from '@/utils/helpers';
 import { ApproachesSection } from './ApproachesSection';
+import { HintsSection } from './HintsSection';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
 import type { LeetCodeProblem } from '@/types';
 
 interface SidePanelProps {
@@ -13,15 +15,8 @@ const PANEL_WIDTH_PX = 340;
 const TAB_WIDTH_PX = 32;
 
 /**
- * M1 side panel: a collapsible drawer pinned to the right edge of any
+ * Side panel: a collapsible drawer pinned to the right edge of any
  * LeetCode problem page.
- *
- * Layout:
- *   - Outer wrapper is fixed at right:0, width = panel + tab.
- *   - The toggle tab sits ABSOLUTELY positioned on the left edge of the wrapper
- *     so it stays clickable regardless of how the panel translates.
- *   - When collapsed we translate the wrapper right by PANEL_WIDTH_PX, leaving
- *     only the tab visible.
  */
 export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -36,12 +31,11 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
         width: PANEL_WIDTH_PX + TAB_WIDTH_PX,
         transform: collapsed ? `translateX(${PANEL_WIDTH_PX}px)` : 'translateX(0)',
         transition: 'transform 300ms ease-out',
-        pointerEvents: 'none', // let the tab/aside re-enable pointer events
+        pointerEvents: 'none',
         zIndex: 2147483647,
       }}
     >
-      {/* Toggle tab — absolutely anchored to the LEFT edge of the wrapper.
-          This stays visible whether the panel is open or collapsed. */}
+      {/* Toggle tab — absolutely anchored to the LEFT edge of the wrapper. */}
       <button
         type="button"
         onClick={() => setCollapsed((v) => !v)}
@@ -62,7 +56,8 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
           fontSize: 18,
           fontWeight: 700,
           borderRadius: '10px 0 0 10px',
-          boxShadow: '0 0 0 2px rgba(0,0,0,0.4), -6px 0 24px rgba(34,197,94,0.55), 0 0 18px rgba(254,240,138,0.5)',
+          boxShadow:
+            '0 0 0 2px rgba(0,0,0,0.4), -6px 0 24px rgba(34,197,94,0.55), 0 0 18px rgba(254,240,138,0.5)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -74,7 +69,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
         <span style={{ fontSize: 16 }}>{collapsed ? '◀' : '▶'}</span>
       </button>
 
-      {/* Panel body — sits to the right of the tab. */}
+      {/* Panel body */}
       <aside
         style={{
           position: 'absolute',
@@ -96,7 +91,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
             <span className="text-xs font-bold tracking-wide text-gray-200">
               LeetCode Guide
             </span>
-            <span className="ml-auto text-[10px] text-gray-600">M1</span>
+            <span className="ml-auto text-[10px] text-gray-600">M3</span>
           </div>
 
           {loading && <ProblemHeaderSkeleton />}
@@ -145,16 +140,12 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
           {problem && (
             <div className="flex flex-col gap-3 animate-fade-in">
               <ApproachesSection problem={problem} />
-              <SectionPlaceholder
-                emoji="💡"
-                title="Progressive hints"
-                body="Coming in M3 — five hint levels per approach."
-              />
-              <SectionPlaceholder
-                emoji="🔓"
-                title="Solution reveal"
-                body="Coming in M5 — unlocks only after an Accepted submission."
-              />
+              <HintsSection problem={problem} />
+              <CollapsibleSection emoji="🔓" title="Solution reveal">
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Coming in M5 — unlocks only after an Accepted submission.
+                </p>
+              </CollapsibleSection>
 
               <details className="mt-2 bg-gray-800/40 border border-gray-700/40 rounded-lg">
                 <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-gray-300 select-none">
@@ -212,25 +203,5 @@ const EmptyState: React.FC = () => (
       Navigate to any <code className="font-mono text-gray-300">leetcode.com/problems/*</code>{' '}
       page and this panel will load it automatically.
     </p>
-  </div>
-);
-
-interface SectionPlaceholderProps {
-  emoji: string;
-  title: string;
-  body: string;
-}
-
-const SectionPlaceholder: React.FC<SectionPlaceholderProps> = ({
-  emoji,
-  title,
-  body,
-}) => (
-  <div className="bg-gray-800/40 border border-gray-700/40 rounded-lg p-3">
-    <div className="flex items-center gap-2 mb-1">
-      <span>{emoji}</span>
-      <span className="text-xs font-semibold text-gray-200">{title}</span>
-    </div>
-    <p className="text-xs text-gray-500 leading-relaxed">{body}</p>
   </div>
 );

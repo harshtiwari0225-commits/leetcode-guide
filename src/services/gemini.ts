@@ -12,7 +12,13 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { Approach, LeetCodeProblem, ProblemAnalysis } from '@/types';
+import type {
+  Approach,
+  Hint,
+  HintLevel,
+  LeetCodeProblem,
+  ProblemAnalysis,
+} from '@/types';
 import { getApiKey } from '@/services/storage';
 
 // ─────────────────────────────────────────────
@@ -32,7 +38,10 @@ const MAX_RETRIES = 1;
 const CODE_FENCE_RE = /```/;
 const CODE_KEYWORDS_RE =
   /\b(?:def |function |class |return |const |let |var |import |for\s*\(|while\s*\(|if\s*\(|public\s+(?:static|class)|#include)\b/;
-const ASSIGNMENT_RE = /[a-zA-Z_]\w*\s*=\s*[a-zA-Z0-9_[{(]/;
+// True code assignment: identifier = expression at the start of a line, or
+// after a semicolon/brace. Plain English mentions of "x = 5" inside a
+// sentence are allowed — only line-leading assignments count as code.
+const ASSIGNMENT_RE = /(?:^|[;{}\n])\s*(?:const |let |var )?\s*[a-zA-Z_]\w*\s*=\s*[a-zA-Z0-9_[{(]/m;
 
 export const containsCode = (text: string): string | null => {
   if (CODE_FENCE_RE.test(text)) return 'code fence (```)';
@@ -236,6 +245,128 @@ export const analyzeProblem = async (
   if (lastError instanceof Error) throw lastError;
   throw new Error('Gemini analysis failed for unknown reason');
 };
+
+
+// ─────────────────────────────────────────────
+// Hint generation (M3)
+// ─────────────────────────────────────────────
+
+const HINT_LEVEL_INSTRUCTIONS: Record<HintLevel, string> = {
+  1: 'Level 1 — Vague direction. Point toward the general kind of thinking needed without naming any data structure or algorithm. Maximum 2 sentences.',
+  2: 'Level 2 — Category. Name the broad category of solution (e.g. "searching", "two-pointer family", "graph traversal", "dynamic programming") but NOT the specific technique. Maximum 2 sentences.',
+  3: 'Level 3 — Technique. Explicitly name the data structure or algorithm (e.g. "use a hash map", "use binary search"). Briefly say WHY. Maximum 3 sentences.',
+  4: 'Level 4 — Plain English steps. Walk through the algorithm in numbered plain-English steps. Maximum 5 numbered steps. Absolutely no code, no syntax, no variable names with operators.',
+  5: 'Level 5 — Worked example. Walk through the first example input step by step using the chosen technique. Describe what conceptually happens at each step. Still NO code — no brackets, equals signs, function calls.',
+};
+
+const buildHintPrompt = (
+  problem: LeetCodeProblem,
+  approach: Approach,
+  level: HintLevel,
+  previousHints: Hint[],
+): string => {
+  const previous =
+    previousHints.length === 0
+      ? 'None yet.'
+      : previousHints
+          .map((h) => `Level ${h.level}: ${h.content}`)
+          .join('\n');
+
+  return [
+    'You are a patient programming tutor helping a student solve a LeetCode problem.',
+    'The student picked a specific approach and is asking for a hint at a specific level.',
+    '',
+    'STRICT RULES — non-negotiable:',
+    '- NEVER show code, pseudocode, syntax, function signatures, or variable assignments.',
+    '- NEVER include backticks, "def", "function", "return", "class", "import", etc.',
+    '- Build naturally on previous hints. Do not repeat them.',
+    '- Stay focused on the chosen approach.',
+    '- Match the requested hint level EXACTLY — do not reveal more than asked.',
+    '',
+    'Respond with ONLY a valid JSON object — no prose before or after:',
+    '{ "hint": "the hint content as plain English (1–5 sentences depending on level)" }',
+    '',
+    `Problem: ${problem.title} (${problem.difficulty})`,
+    `Chosen approach: ${approach.name} — ${approach.technique}`,
+    '',
+    'Problem statement:',
+    problem.description,
+    problem.examples.length > 0
+      ? `\nFirst example:\n${problem.examples[0]}`
+      : '',
+    '',
+    `Previous hints given for this approach:\n${previous}`,
+    '',
+    HINT_LEVEL_INSTRUCTIONS[level],
+  ]
+    .filter(Boolean)
+    .join('\n');
+};
+
+const parseHintResponse = (raw: string): string => {
+  const jsonText = extractJson(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new GeminiValidationError(
+      `Gemini did not return valid JSON for hint: "${jsonText.slice(0, 120)}..."`,
+    );
+  }
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    typeof (parsed as { hint?: unknown }).hint !== 'string'
+  ) {
+    throw new GeminiValidationError(
+      'Gemini hint response missing "hint" string',
+    );
+  }
+  const hint = (parsed as { hint: string }).hint.trim();
+  if (!hint) {
+    throw new GeminiValidationError('Gemini returned an empty hint');
+  }
+  const leak = containsCode(hint);
+  if (leak) {
+    throw new GeminiValidationError(`Hint contains ${leak}`);
+  }
+  return hint;
+};
+
+export const generateHint = async (
+  problem: LeetCodeProblem,
+  approach: Approach,
+  level: HintLevel,
+  previousHints: Hint[],
+): Promise<Hint> => {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new GeminiKeyMissingError();
+
+  const prompt = buildHintPrompt(problem, approach, level, previousHints);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const raw = await generateOnce(apiKey, prompt);
+      const content = parseHintResponse(raw);
+      return {
+        level,
+        content,
+        approachId: approach.id,
+        generatedAt: Date.now(),
+      };
+    } catch (err) {
+      lastError = err;
+      if (err instanceof GeminiValidationError) break;
+      if (err instanceof GeminiKeyMissingError) break;
+    }
+  }
+  if (lastError instanceof Error) throw lastError;
+  throw new Error('Hint generation failed for unknown reason');
+};
+
+/** Exposed for testing. */
+export { parseHintResponse };
 
 /** Exposed for testing. */
 export const parseAnalysisResponse = (

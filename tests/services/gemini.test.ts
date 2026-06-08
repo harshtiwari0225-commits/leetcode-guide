@@ -16,10 +16,12 @@ import {
   containsCode,
   GeminiKeyMissingError,
   GeminiValidationError,
+  generateHint,
   parseAnalysisResponse,
+  parseHintResponse,
 } from '@/services/gemini';
 import { setApiKey, clearApiKey } from '@/services/storage';
-import type { LeetCodeProblem } from '@/types';
+import type { Approach, LeetCodeProblem } from '@/types';
 
 const mockProblem: LeetCodeProblem = {
   id: 'two-sum',
@@ -62,6 +64,10 @@ beforeEach(async () => {
   await clearApiKey();
 });
 
+// ─────────────────────────────────────────────
+// No-code validator
+// ─────────────────────────────────────────────
+
 describe('containsCode', () => {
   it('flags triple backticks', () => {
     expect(containsCode('See the example: ```python ... ```')).toContain('code fence');
@@ -86,6 +92,10 @@ describe('containsCode', () => {
     expect(containsCode('Iterate through the array once.')).toBeNull();
   });
 });
+
+// ─────────────────────────────────────────────
+// parseAnalysisResponse
+// ─────────────────────────────────────────────
 
 describe('parseAnalysisResponse', () => {
   it('parses a clean JSON response', () => {
@@ -170,6 +180,10 @@ describe('parseAnalysisResponse', () => {
   });
 });
 
+// ─────────────────────────────────────────────
+// analyzeProblem (integration with mocked SDK)
+// ─────────────────────────────────────────────
+
 describe('analyzeProblem', () => {
   it('throws GeminiKeyMissingError when no key is configured', async () => {
     await expect(analyzeProblem(mockProblem)).rejects.toThrow(GeminiKeyMissingError);
@@ -205,6 +219,88 @@ describe('analyzeProblem', () => {
     await expect(analyzeProblem(mockProblem)).rejects.toThrow(
       GeminiValidationError,
     );
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Hint generation (M3)
+// ─────────────────────────────────────────────
+
+const mockApproach: Approach = {
+  id: 'approach-1',
+  name: 'Hash Map',
+  technique: 'Hash Table',
+  type: 'Optimal',
+  timeComplexity: 'O(n)',
+  spaceComplexity: 'O(n)',
+  description: 'Use a hash map to look up complements.',
+  difficultyScore: 2,
+};
+
+describe('parseHintResponse', () => {
+  it('returns a clean plain-English hint', () => {
+    const raw = JSON.stringify({
+      hint: 'Think about how you might trade space for time.',
+    });
+    expect(parseHintResponse(raw)).toMatch(/trade space for time/);
+  });
+
+  it('strips ```json fences', () => {
+    const raw =
+      '```json\n' + JSON.stringify({ hint: 'A plain hint.' }) + '\n```';
+    expect(parseHintResponse(raw)).toBe('A plain hint.');
+  });
+
+  it('rejects empty hints', () => {
+    expect(() => parseHintResponse(JSON.stringify({ hint: '   ' }))).toThrow(
+      GeminiValidationError,
+    );
+  });
+
+  it('rejects hints that contain code', () => {
+    const raw = JSON.stringify({
+      hint: 'def two_sum(nums, target): return [i, j]',
+    });
+    expect(() => parseHintResponse(raw)).toThrow(GeminiValidationError);
+  });
+
+  it('rejects hints with code fences', () => {
+    const raw = JSON.stringify({ hint: 'See: ```python ...```' });
+    expect(() => parseHintResponse(raw)).toThrow(GeminiValidationError);
+  });
+
+  it('rejects malformed JSON', () => {
+    expect(() => parseHintResponse('not json')).toThrow(GeminiValidationError);
+  });
+});
+
+describe('generateHint', () => {
+  it('throws GeminiKeyMissingError without a key', async () => {
+    await expect(
+      generateHint(mockProblem, mockApproach, 1, []),
+    ).rejects.toThrow(GeminiKeyMissingError);
+  });
+
+  it('returns a Hint with the requested level and approachId', async () => {
+    await setApiKey('FAKE');
+    mockGenerateContent.mockResolvedValueOnce({
+      response: { text: () => JSON.stringify({ hint: 'Lookup is cheap.' }) },
+    });
+    const hint = await generateHint(mockProblem, mockApproach, 3, []);
+    expect(hint.level).toBe(3);
+    expect(hint.approachId).toBe('approach-1');
+    expect(hint.content).toBe('Lookup is cheap.');
+  });
+
+  it('does not retry on validation error (code leak)', async () => {
+    await setApiKey('FAKE');
+    mockGenerateContent.mockResolvedValue({
+      response: { text: () => JSON.stringify({ hint: 'def solve(): return 0' }) },
+    });
+    await expect(
+      generateHint(mockProblem, mockApproach, 1, []),
+    ).rejects.toThrow(GeminiValidationError);
     expect(mockGenerateContent).toHaveBeenCalledTimes(1);
   });
 });

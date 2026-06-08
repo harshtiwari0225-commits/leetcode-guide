@@ -9,7 +9,7 @@
  * M4 will add progress records (hints used, attempts, solved status, stats).
  */
 
-import type { ProblemAnalysis } from '@/types';
+import type { Hint, HintLevel, HintSession, ProblemAnalysis } from '@/types';
 
 // ─────────────────────────────────────────────
 // Storage keys
@@ -18,6 +18,8 @@ import type { ProblemAnalysis } from '@/types';
 const KEYS = {
   apiKey: 'gemini_api_key',
   analysis: (slug: string) => `analysis:${slug}`,
+  hints: (slug: string, approachId: string) =>
+    `hints:${slug}:${approachId}`,
   problemIndex: 'problem_index',
 } as const;
 
@@ -96,6 +98,40 @@ const addToProblemIndex = async (slug: string): Promise<void> => {
   const idx = await getProblemIndex();
   if (idx.includes(slug)) return;
   await set(KEYS.problemIndex, [...idx, slug]);
+};
+
+// ─────────────────────────────────────────────
+// Hint sessions (one per problem × approach)
+// ─────────────────────────────────────────────
+
+export const getHintSession = async (
+  slug: string,
+  approachId: string,
+): Promise<HintSession | null> =>
+  get<HintSession>(KEYS.hints(slug, approachId));
+
+export const appendHint = async (
+  slug: string,
+  approachId: string,
+  hint: Hint,
+): Promise<HintSession> => {
+  const existing =
+    (await get<HintSession>(KEYS.hints(slug, approachId))) ?? {
+      problemId: slug,
+      approachId,
+      hintsRevealed: [] as HintLevel[],
+      hints: [] as Hint[],
+    };
+  // Replace existing hint at same level if user re-requests (defensive).
+  const filteredHints = existing.hints.filter((h) => h.level !== hint.level);
+  const filteredLevels = existing.hintsRevealed.filter((l) => l !== hint.level);
+  const next: HintSession = {
+    ...existing,
+    hintsRevealed: [...filteredLevels, hint.level].sort((a, b) => a - b),
+    hints: [...filteredHints, hint].sort((a, b) => a.level - b.level),
+  };
+  await set(KEYS.hints(slug, approachId), next);
+  return next;
 };
 
 // ─────────────────────────────────────────────
