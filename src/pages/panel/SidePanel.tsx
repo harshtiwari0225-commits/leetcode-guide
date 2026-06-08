@@ -3,6 +3,7 @@ import { cn, difficultyBgColor, difficultyColor, truncate } from '@/utils/helper
 import { ApproachesSection } from './ApproachesSection';
 import { HintsSection } from './HintsSection';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
+import { useTimeTracker } from '@/hooks/useTimeTracker';
 import type { LeetCodeProblem } from '@/types';
 
 interface SidePanelProps {
@@ -20,6 +21,7 @@ const TAB_WIDTH_PX = 32;
  */
 export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error }) => {
   const [collapsed, setCollapsed] = useState(false);
+  useTimeTracker(problem);
 
   return (
     <div

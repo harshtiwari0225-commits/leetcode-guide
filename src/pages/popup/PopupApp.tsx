@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/utils/helpers';
 import { clearApiKey, getApiKey, setApiKey } from '@/services/storage';
+import { Dashboard } from './Dashboard';
 
-type Tab = 'status' | 'settings';
+type Tab = 'status' | 'dashboard' | 'settings';
 
 /**
  * Popup UI (M2): status + settings tabs. Settings lets the user paste a
@@ -88,19 +89,25 @@ export const PopupApp: React.FC = () => {
 
       {/* Tabs */}
       <nav className="flex border-b border-gray-800">
-        {(['status', 'settings'] as const).map((t) => (
+        {(
+          [
+            { id: 'status', label: '📊 Status' },
+            { id: 'dashboard', label: '📈 Dashboard' },
+            { id: 'settings', label: '⚙️ Settings' },
+          ] as const
+        ).map((t) => (
           <button
-            key={t}
+            key={t.id}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => setTab(t.id)}
             className={cn(
-              'flex-1 py-2.5 text-xs font-semibold transition-colors',
-              tab === t
+              'flex-1 py-2.5 text-[11px] font-semibold transition-colors',
+              tab === t.id
                 ? 'text-brand-400 border-b-2 border-brand-500'
                 : 'text-gray-500 hover:text-gray-300',
             )}
           >
-            {t === 'status' ? '📊 Status' : '⚙️ Settings'}
+            {t.label}
           </button>
         ))}
       </nav>
@@ -115,6 +122,8 @@ export const PopupApp: React.FC = () => {
             onOpenSettings={() => setTab('settings')}
           />
         )}
+
+        {tab === 'dashboard' && <Dashboard />}
 
         {tab === 'settings' && (
           <SettingsTab

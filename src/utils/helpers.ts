@@ -39,3 +39,28 @@ export const difficultyBgColor = (difficulty: string): string => {
       return 'bg-gray-400/10 border-gray-400/30';
   }
 };
+
+
+/** Format an integer number of seconds as a compact h/m/s string. */
+export const formatDuration = (seconds: number): string => {
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return remMins > 0 ? `${hours}h ${remMins}m` : `${hours}h`;
+};
+
+/** Format a Unix timestamp as a relative "x ago" string. */
+export const formatRelativeTime = (ts: number): string => {
+  const diffMs = Date.now() - ts;
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString();
+};

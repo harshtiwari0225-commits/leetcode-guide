@@ -5,6 +5,10 @@ import {
   generateHint,
 } from '@/services/gemini';
 import { appendHint, getHintSession } from '@/services/storage';
+import {
+  addApproachExplored,
+  incrementHintsUsed,
+} from '@/services/progress';
 import type {
   Approach,
   Hint,
@@ -86,6 +90,9 @@ export const useHints = (
       try {
         const hint = await generateHint(problem, approach, level, previousHints);
         const updated = await appendHint(problem.id, approach.id, hint);
+        // Progress tracking (fire-and-forget; should never block UI).
+        void incrementHintsUsed(problem.id);
+        void addApproachExplored(problem.id, approach.id);
         setSession(updated);
         setFetchStatus('idle');
       } catch (err) {

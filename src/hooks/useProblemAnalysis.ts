@@ -5,6 +5,7 @@ import {
   GeminiValidationError,
 } from '@/services/gemini';
 import { cacheAnalysis, getCachedAnalysis } from '@/services/storage';
+import { touchProblem } from '@/services/progress';
 import type { LeetCodeProblem, ProblemAnalysis } from '@/types';
 
 export type AnalysisStatus =
@@ -48,6 +49,9 @@ export const useProblemAnalysis = (
       if (cancelled) return;
       setStatus('loading');
       setError(null);
+
+      // Track that the user visited this problem (fire-and-forget).
+      void touchProblem(problem.id, problem.title, problem.difficulty);
 
       // 1. Try cache first (unless this is an explicit refresh — nonce>0 forces refetch).
       if (nonce === 0) {
