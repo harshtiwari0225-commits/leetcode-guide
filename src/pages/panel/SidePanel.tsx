@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { cn, difficultyBgColor, difficultyColor, truncate } from '@/utils/helpers';
 import { ApproachesSection } from './ApproachesSection';
 import { HintsSection } from './HintsSection';
+import { ApproachComparisonSection } from './ApproachComparisonSection';
 import { SolutionRevealSection } from './SolutionRevealSection';
 import { useTimeTracker } from '@/hooks/useTimeTracker';
 import { useAcceptedSubmission } from '@/hooks/useAcceptedSubmission';
@@ -154,6 +155,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
             <div className="flex flex-col gap-3 animate-fade-in">
               <ApproachesSection problem={problem} />
               <HintsSection problem={problem} />
+              <ApproachComparisonSection problem={problem} />
               <SolutionRevealSection problem={problem} accepted={accepted} />
 
               <details className="mt-2 bg-gray-800/40 border border-gray-700/40 rounded-lg">
