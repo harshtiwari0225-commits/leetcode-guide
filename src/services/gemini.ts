@@ -18,6 +18,9 @@ import type {
   HintLevel,
   LeetCodeProblem,
   ProblemAnalysis,
+  ProgrammingLanguage,
+  Solution,
+  SolutionReveal,
 } from '@/types';
 import { getApiKey } from '@/services/storage';
 
@@ -51,7 +54,7 @@ export const containsCode = (text: string): string | null => {
   }
   if (ASSIGNMENT_RE.test(text)) {
     const m = text.match(ASSIGNMENT_RE);
-    return `assignment "${m?.[0] ?? '?'}"`;
+    return `assignment "${m?.[0]?.trim() ?? '?'}"`;
   }
   return null;
 };
@@ -246,7 +249,6 @@ export const analyzeProblem = async (
   throw new Error('Gemini analysis failed for unknown reason');
 };
 
-
 // ─────────────────────────────────────────────
 // Hint generation (M3)
 // ─────────────────────────────────────────────
@@ -256,7 +258,7 @@ const HINT_LEVEL_INSTRUCTIONS: Record<HintLevel, string> = {
   2: 'Level 2 — Category. Name the broad category of solution (e.g. "searching", "two-pointer family", "graph traversal", "dynamic programming") but NOT the specific technique. Maximum 2 sentences.',
   3: 'Level 3 — Technique. Explicitly name the data structure or algorithm (e.g. "use a hash map", "use binary search"). Briefly say WHY. Maximum 3 sentences.',
   4: 'Level 4 — Plain English steps. Walk through the algorithm in numbered plain-English steps. Maximum 5 numbered steps. Absolutely no code, no syntax, no variable names with operators.',
-  5: 'Level 5 — Worked example. Walk through the first example input step by step using the chosen technique. Describe what conceptually happens at each step. Still NO code — no brackets, equals signs, function calls.',
+  5: 'Level 5 — Worked example. Walk through the first example input step by step using the chosen technique. Describe what conceptually happens at each step in prose. Refer to values using words like "the first value (2)", "the target (9)", "store the value at index 0". Do NOT write expressions like "nums = [2,7,11,15]" or "target = 9". Do NOT use equals signs as assignments. Plain English only.',
 };
 
 const buildHintPrompt = (
@@ -415,3 +417,160 @@ export const parseAnalysisResponse = (
     cacheKey: `${problem.id}_${problem.title}`,
   };
 };
+
+// ─────────────────────────────────────────────
+// Solution reveal (M5)
+//
+// IMPORTANT: this is the ONLY part of the codebase that intentionally returns
+// code. We do NOT run containsCode() on the response. The UI must enforce
+// that this is only called after a verified Accepted submission.
+// ─────────────────────────────────────────────
+
+const LANGUAGE_LABELS: Record<ProgrammingLanguage, string> = {
+  python: 'Python 3',
+  javascript: 'JavaScript (ES2022)',
+  java: 'Java 17',
+  c: 'C (C11)',
+  cpp: 'C++17',
+};
+
+const buildSolutionPrompt = (
+  problem: LeetCodeProblem,
+  approaches: Approach[],
+  language: ProgrammingLanguage,
+): string =>
+  [
+    'You are an expert competitive programmer producing a teaching reference solution.',
+    `Language: ${LANGUAGE_LABELS[language]}.`,
+    '',
+    'Rules:',
+    '- Generate ONE optimal, clean, well-commented solution.',
+    '- Use idiomatic style for the chosen language.',
+    '- Inline comments should explain the WHY, not restate the code.',
+    '- The "explanation" array should be 3–6 step-by-step plain-English sentences walking through the algorithm.',
+    '- The "keyTakeaways" array should be 2–4 short bullet-style insights for similar problems.',
+    '- Time and space complexity must be Big-O strings.',
+    '',
+    'Respond with ONLY a valid JSON object — no prose before or after:',
+    '{',
+    '  "code": "complete runnable solution",',
+    '  "explanation": ["step 1", "step 2", "..."],',
+    '  "timeComplexity": "O(n)",',
+    '  "spaceComplexity": "O(1)",',
+    '  "keyTakeaways": ["insight 1", "insight 2"],',
+    '  "alternativeApproaches": ["1-sentence summary of an alternative", "..."]',
+    '}',
+    '',
+    `Problem: ${problem.title} (${problem.difficulty})`,
+    `Tags: ${problem.tags.join(', ') || '(none)'}`,
+    '',
+    'Problem statement:',
+    problem.description,
+    '',
+    problem.examples.length > 0
+      ? `Examples:\n${problem.examples.join('\n')}`
+      : '',
+    problem.constraints.length > 0
+      ? `Constraints:\n${problem.constraints.join('\n')}`
+      : '',
+    '',
+    approaches.length > 0
+      ? `Known approaches (for context):\n${approaches
+          .map((a) => `- ${a.name} (${a.timeComplexity} time / ${a.spaceComplexity} space)`)
+          .join('\n')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+interface RawSolutionPayload {
+  code: string;
+  explanation: string[];
+  timeComplexity: string;
+  spaceComplexity: string;
+  keyTakeaways: string[];
+  alternativeApproaches: string[];
+}
+
+const parseSolutionResponse = (raw: string): RawSolutionPayload => {
+  const jsonText = extractJson(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new GeminiValidationError(
+      `Gemini did not return valid JSON for solution: "${jsonText.slice(0, 120)}..."`,
+    );
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    throw new GeminiValidationError('Solution response is not an object');
+  }
+  const p = parsed as Record<string, unknown>;
+  if (typeof p.code !== 'string' || p.code.trim().length < 10) {
+    throw new GeminiValidationError('Solution response missing "code"');
+  }
+  const explanation = Array.isArray(p.explanation)
+    ? p.explanation.filter((s): s is string => typeof s === 'string')
+    : [];
+  const keyTakeaways = Array.isArray(p.keyTakeaways)
+    ? p.keyTakeaways.filter((s): s is string => typeof s === 'string')
+    : [];
+  const alternativeApproaches = Array.isArray(p.alternativeApproaches)
+    ? p.alternativeApproaches.filter((s): s is string => typeof s === 'string')
+    : [];
+  return {
+    code: p.code,
+    explanation,
+    timeComplexity:
+      typeof p.timeComplexity === 'string' ? p.timeComplexity : 'O(?)',
+    spaceComplexity:
+      typeof p.spaceComplexity === 'string' ? p.spaceComplexity : 'O(?)',
+    keyTakeaways,
+    alternativeApproaches,
+  };
+};
+
+export const generateSolution = async (
+  problem: LeetCodeProblem,
+  approaches: Approach[],
+  language: ProgrammingLanguage,
+): Promise<SolutionReveal> => {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new GeminiKeyMissingError();
+
+  const prompt = buildSolutionPrompt(problem, approaches, language);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const raw = await generateOnce(apiKey, prompt);
+      const parsed = parseSolutionResponse(raw);
+      const optimalApproach =
+        approaches.find((a) => a.type === 'Optimal') ?? approaches[0];
+      const solution: Solution = {
+        approachId: optimalApproach?.id ?? 'unknown',
+        language,
+        code: parsed.code,
+        explanation: parsed.explanation,
+        timeComplexity: parsed.timeComplexity,
+        spaceComplexity: parsed.spaceComplexity,
+        keyTakeaways: parsed.keyTakeaways,
+      };
+      return {
+        problemId: problem.id,
+        solutions: [solution],
+        alternativeApproaches: parsed.alternativeApproaches,
+        revealedAt: Date.now(),
+      };
+    } catch (err) {
+      lastError = err;
+      if (err instanceof GeminiValidationError) break;
+      if (err instanceof GeminiKeyMissingError) break;
+    }
+  }
+  if (lastError instanceof Error) throw lastError;
+  throw new Error('Solution generation failed for unknown reason');
+};
+
+/** Exposed for testing. */
+export { parseSolutionResponse };

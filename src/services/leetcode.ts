@@ -1,14 +1,13 @@
 /**
  * LeetCode page integration service.
  *
- * Responsibilities (M1):
+ * Responsibilities (M1 + M5):
  *  - Read problem identity (slug) from the URL.
  *  - Extract title / difficulty / tags / description from the LeetCode DOM
  *    with selector fallbacks so DOM redesigns don't kill us (PRD §7).
  *  - Poll until the SPA finishes rendering, then return a `LeetCodeProblem`.
  *  - Notify when the user navigates to a different problem without a reload.
- *
- * Later milestones (M5) will add `watchSubmissionResult` here.
+ *  - Watch for an "Accepted" submission verdict (M5).
  */
 
 import type { Difficulty, LeetCodeProblem } from '@/types';
@@ -272,5 +271,138 @@ export const watchForNavigation = (
     history.pushState = originalPush;
     history.replaceState = originalReplace;
     window.removeEventListener('popstate', fireIfChanged);
+  };
+};
+
+// ─────────────────────────────────────────────
+// Submission verdict watcher (M5)
+//
+// Strategy A (primary): hook window.fetch and inspect responses to
+// /submissions/check — LeetCode polls this URL for verdicts. When the
+// response's status_msg field is "Accepted" and the submission's question
+// matches the current slug, fire onAccepted.
+//
+// Strategy B (fallback): MutationObserver scoped to the submission result
+// container. Looks for an element whose text contains "Accepted" inside a
+// narrow set of selectors (NOT the whole body).
+//
+// Both fire only once per slug per session; teardown undoes both.
+// ─────────────────────────────────────────────
+
+const RESULT_SELECTORS = [
+  '[data-e2e-locator="submission-result"]',
+  '[data-e2e-locator="console-result"]',
+  '.text-green-s', // 2024 redesign — green Accepted text
+];
+
+const isAcceptedText = (text: string): boolean => {
+  const t = text.toLowerCase();
+  if (!t.includes('accepted')) return false;
+  if (t.includes('not accepted')) return false;
+  if (t.includes('wrong')) return false;
+  if (t.includes('limit exceeded')) return false;
+  return true;
+};
+
+export const watchForAcceptedSubmission = (
+  onAccepted: () => void,
+): (() => void) => {
+  let fired = false;
+  const fireOnce = () => {
+    if (fired) return;
+    fired = true;
+    try {
+      onAccepted();
+    } catch (err) {
+      console.error('[LeetCode Guide] onAccepted threw:', err);
+    }
+  };
+
+  // ── Strategy A: fetch hook ──
+  const originalFetch = window.fetch.bind(window);
+  const hookedFetch: typeof window.fetch = async (input, init) => {
+    const response = await originalFetch(input, init);
+    try {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      if (
+        url.includes('/submissions/check/') ||
+        url.includes('/submissions/detail/')
+      ) {
+        const cloned = response.clone();
+        cloned
+          .json()
+          .then((data: unknown) => {
+            if (
+              data &&
+              typeof data === 'object' &&
+              'status_msg' in data &&
+              typeof (data as { status_msg: unknown }).status_msg === 'string' &&
+              isAcceptedText((data as { status_msg: string }).status_msg)
+            ) {
+              fireOnce();
+            }
+          })
+          .catch(() => {
+            /* not JSON or parse failure — ignore */
+          });
+      }
+    } catch {
+      /* never let our hook break LeetCode */
+    }
+    return response;
+  };
+  window.fetch = hookedFetch;
+
+  // ── Strategy B: scoped DOM observer ──
+  const observer = new MutationObserver((mutations) => {
+    if (fired) return;
+    for (const m of mutations) {
+      for (const node of Array.from(m.addedNodes)) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        const el = node as Element;
+        for (const sel of RESULT_SELECTORS) {
+          try {
+            const match = el.matches(sel) ? el : el.querySelector(sel);
+            if (match && isAcceptedText(match.textContent ?? '')) {
+              fireOnce();
+              return;
+            }
+          } catch {
+            /* invalid selector for this engine — skip */
+          }
+        }
+      }
+    }
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+
+  // Initial scan — user may have refreshed after solving.
+  for (const sel of RESULT_SELECTORS) {
+    try {
+      const existing = document.querySelector(sel);
+      if (existing && isAcceptedText(existing.textContent ?? '')) {
+        // Defer so the listener has time to mount.
+        setTimeout(fireOnce, 200);
+        break;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  return () => {
+    if (window.fetch === hookedFetch) {
+      window.fetch = originalFetch;
+    }
+    observer.disconnect();
   };
 };

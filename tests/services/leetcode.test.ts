@@ -3,6 +3,7 @@ import {
   extractSlugFromUrl,
   extractProblemFromPage,
   waitForProblemLoad,
+  watchForAcceptedSubmission,
   watchForNavigation,
 } from '@/services/leetcode';
 
@@ -25,6 +26,7 @@ Output: [0,1]</pre>
 `;
 
 const setUrl = (path: string) => {
+  // jsdom allows direct mutation of window.location via history API
   history.replaceState({}, '', path);
 };
 
@@ -150,5 +152,95 @@ describe('watchForNavigation', () => {
 
     history.pushState({}, '', '/problems/add-two-numbers/');
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('watchForAcceptedSubmission', () => {
+  let originalFetch: typeof window.fetch;
+
+  beforeEach(() => {
+    originalFetch = window.fetch;
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    window.fetch = originalFetch;
+    document.body.innerHTML = '';
+  });
+
+  const installFakeFetch = (body: Record<string, unknown>) => {
+    window.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ) as typeof window.fetch;
+  };
+
+  it('fires onAccepted when fetch returns Accepted on /submissions/check/', async () => {
+    installFakeFetch({ status_msg: 'Accepted' });
+    const onAccepted = vi.fn();
+    const stop = watchForAcceptedSubmission(onAccepted);
+
+    await window.fetch('https://leetcode.com/submissions/check/12345/');
+    // Allow microtasks to settle (cloned response.json() is async).
+    await new Promise((r) => setTimeout(r, 10));
+    expect(onAccepted).toHaveBeenCalledTimes(1);
+
+    stop();
+  });
+
+  it('does not fire on /submissions/check/ when status is Wrong Answer', async () => {
+    installFakeFetch({ status_msg: 'Wrong Answer' });
+    const onAccepted = vi.fn();
+    const stop = watchForAcceptedSubmission(onAccepted);
+
+    await window.fetch('https://leetcode.com/submissions/check/12345/');
+    await new Promise((r) => setTimeout(r, 10));
+    expect(onAccepted).not.toHaveBeenCalled();
+
+    stop();
+  });
+
+  it('fires at most once even if Accepted appears multiple times', async () => {
+    installFakeFetch({ status_msg: 'Accepted' });
+    const onAccepted = vi.fn();
+    const stop = watchForAcceptedSubmission(onAccepted);
+
+    await window.fetch('https://leetcode.com/submissions/check/1/');
+    await window.fetch('https://leetcode.com/submissions/check/2/');
+    await new Promise((r) => setTimeout(r, 10));
+    expect(onAccepted).toHaveBeenCalledTimes(1);
+
+    stop();
+  });
+
+  it('teardown stops intercepting fetch calls', async () => {
+    const onAccepted = vi.fn();
+    const stop = watchForAcceptedSubmission(onAccepted);
+    stop();
+
+    // After teardown, even a juicy Accepted body shouldn't fire.
+    installFakeFetch({ status_msg: 'Accepted' });
+    await window.fetch('https://leetcode.com/submissions/check/12345/');
+    await new Promise((r) => setTimeout(r, 10));
+    expect(onAccepted).not.toHaveBeenCalled();
+  });
+
+  it('fires via DOM observer when result element is added to body', async () => {
+    const onAccepted = vi.fn();
+    const stop = watchForAcceptedSubmission(onAccepted);
+
+    const el = document.createElement('div');
+    el.setAttribute('data-e2e-locator', 'submission-result');
+    el.textContent = 'Accepted';
+    document.body.appendChild(el);
+
+    // MutationObserver is async — yield.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(onAccepted).toHaveBeenCalledTimes(1);
+
+    stop();
   });
 });

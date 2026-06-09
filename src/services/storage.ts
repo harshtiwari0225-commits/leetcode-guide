@@ -9,7 +9,14 @@
  * M4 will add progress records (hints used, attempts, solved status, stats).
  */
 
-import type { Hint, HintLevel, HintSession, ProblemAnalysis } from '@/types';
+import type {
+  Hint,
+  HintLevel,
+  HintSession,
+  ProblemAnalysis,
+  ProgrammingLanguage,
+  SolutionReveal,
+} from '@/types';
 
 // ─────────────────────────────────────────────
 // Storage keys
@@ -20,6 +27,8 @@ const KEYS = {
   analysis: (slug: string) => `analysis:${slug}`,
   hints: (slug: string, approachId: string) =>
     `hints:${slug}:${approachId}`,
+  solution: (slug: string, language: string) =>
+    `solution:${slug}:${language}`,
   problemIndex: 'problem_index',
 } as const;
 
@@ -132,6 +141,25 @@ export const appendHint = async (
   };
   await set(KEYS.hints(slug, approachId), next);
   return next;
+};
+
+// ─────────────────────────────────────────────
+// Solution reveal cache (M5)
+// One entry per (slug, language) — generating in another language costs
+// another API call but caches independently.
+// ─────────────────────────────────────────────
+
+export const getCachedSolution = async (
+  slug: string,
+  language: ProgrammingLanguage,
+): Promise<SolutionReveal | null> =>
+  get<SolutionReveal>(KEYS.solution(slug, language));
+
+export const cacheSolution = async (
+  language: ProgrammingLanguage,
+  reveal: SolutionReveal,
+): Promise<void> => {
+  await set(KEYS.solution(reveal.problemId, language), reveal);
 };
 
 // ─────────────────────────────────────────────

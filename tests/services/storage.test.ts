@@ -2,14 +2,16 @@ import { describe, it, expect } from 'vitest';
 import {
   appendHint,
   cacheAnalysis,
+  cacheSolution,
   clearAllLocalData,
   clearApiKey,
   getApiKey,
   getCachedAnalysis,
+  getCachedSolution,
   getHintSession,
   setApiKey,
 } from '@/services/storage';
-import type { Hint, ProblemAnalysis } from '@/types';
+import type { Hint, ProblemAnalysis, SolutionReveal } from '@/types';
 
 const fixtureAnalysis = (slug: string, ageMs = 0): ProblemAnalysis => ({
   problem: {
@@ -43,6 +45,23 @@ const makeHint = (level: 1 | 2 | 3 | 4 | 5, content: string): Hint => ({
   content,
   approachId: 'a1',
   generatedAt: Date.now(),
+});
+
+const fixtureReveal = (slug: string): SolutionReveal => ({
+  problemId: slug,
+  solutions: [
+    {
+      approachId: 'a1',
+      language: 'python',
+      code: 'print("ok")',
+      explanation: ['x'],
+      timeComplexity: 'O(1)',
+      spaceComplexity: 'O(1)',
+      keyTakeaways: ['k'],
+    },
+  ],
+  alternativeApproaches: [],
+  revealedAt: Date.now(),
 });
 
 // ─────────────────────────────────────────────
@@ -133,5 +152,45 @@ describe('storage — hint sessions', () => {
     const s2 = await getHintSession('two-sum', 'a2');
     expect(s1!.hints[0].content).toBe('for a1');
     expect(s2!.hints[0].content).toBe('for a2');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Solution reveal cache (M5)
+// ─────────────────────────────────────────────
+
+describe('storage — solution cache', () => {
+  it('returns null when no cached solution exists', async () => {
+    expect(await getCachedSolution('two-sum', 'python')).toBeNull();
+  });
+
+  it('round-trips a solution per language', async () => {
+    await cacheSolution('python', fixtureReveal('two-sum'));
+    const out = await getCachedSolution('two-sum', 'python');
+    expect(out).not.toBeNull();
+    expect(out!.solutions[0].code).toBe('print("ok")');
+
+    // Other language stays empty.
+    expect(await getCachedSolution('two-sum', 'java')).toBeNull();
+  });
+
+  it('keeps solutions per language independent', async () => {
+    await cacheSolution('python', fixtureReveal('two-sum'));
+    const javaReveal: SolutionReveal = {
+      ...fixtureReveal('two-sum'),
+      solutions: [
+        {
+          ...fixtureReveal('two-sum').solutions[0],
+          language: 'java',
+          code: 'System.out.println("ok");',
+        },
+      ],
+    };
+    await cacheSolution('java', javaReveal);
+
+    const py = await getCachedSolution('two-sum', 'python');
+    const java = await getCachedSolution('two-sum', 'java');
+    expect(py!.solutions[0].code).toContain('print');
+    expect(java!.solutions[0].code).toContain('System.out');
   });
 });

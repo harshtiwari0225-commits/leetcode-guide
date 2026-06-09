@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { cn, difficultyBgColor, difficultyColor, truncate } from '@/utils/helpers';
 import { ApproachesSection } from './ApproachesSection';
 import { HintsSection } from './HintsSection';
-import { CollapsibleSection } from '@/components/CollapsibleSection';
+import { SolutionRevealSection } from './SolutionRevealSection';
 import { useTimeTracker } from '@/hooks/useTimeTracker';
+import { useAcceptedSubmission } from '@/hooks/useAcceptedSubmission';
 import type { LeetCodeProblem } from '@/types';
 
 interface SidePanelProps {
@@ -16,12 +17,20 @@ const PANEL_WIDTH_PX = 340;
 const TAB_WIDTH_PX = 32;
 
 /**
- * Side panel: a collapsible drawer pinned to the right edge of any
+ * M1 side panel: a collapsible drawer pinned to the right edge of any
  * LeetCode problem page.
+ *
+ * Layout:
+ *   - Outer wrapper is fixed at right:0, width = panel + tab.
+ *   - The toggle tab sits ABSOLUTELY positioned on the left edge of the wrapper
+ *     so it stays clickable regardless of how the panel translates.
+ *   - When collapsed we translate the wrapper right by PANEL_WIDTH_PX, leaving
+ *     only the tab visible.
  */
 export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error }) => {
   const [collapsed, setCollapsed] = useState(false);
   useTimeTracker(problem);
+  const accepted = useAcceptedSubmission(problem);
 
   return (
     <div
@@ -33,11 +42,12 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
         width: PANEL_WIDTH_PX + TAB_WIDTH_PX,
         transform: collapsed ? `translateX(${PANEL_WIDTH_PX}px)` : 'translateX(0)',
         transition: 'transform 300ms ease-out',
-        pointerEvents: 'none',
+        pointerEvents: 'none', // let the tab/aside re-enable pointer events
         zIndex: 2147483647,
       }}
     >
-      {/* Toggle tab — absolutely anchored to the LEFT edge of the wrapper. */}
+      {/* Toggle tab — absolutely anchored to the LEFT edge of the wrapper.
+          This stays visible whether the panel is open or collapsed. */}
       <button
         type="button"
         onClick={() => setCollapsed((v) => !v)}
@@ -51,7 +61,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
           height: 96,
           pointerEvents: 'auto',
           cursor: 'pointer',
-          border: '2px solid #16a34a',
+          border: '2px solid #fef08a',
           borderRight: 'none',
           background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
           color: 'white',
@@ -68,10 +78,11 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
           lineHeight: 1,
         }}
       >
+        <span style={{ fontSize: 10, letterSpacing: 1 }}>LG</span>
         <span style={{ fontSize: 16 }}>{collapsed ? '◀' : '▶'}</span>
       </button>
 
-      {/* Panel body */}
+      {/* Panel body — sits to the right of the tab. */}
       <aside
         style={{
           position: 'absolute',
@@ -93,7 +104,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
             <span className="text-xs font-bold tracking-wide text-gray-200">
               LeetCode Guide
             </span>
-            <span className="ml-auto text-[10px] text-gray-600">M3</span>
+            <span className="ml-auto text-[10px] text-gray-600">M5</span>
           </div>
 
           {loading && <ProblemHeaderSkeleton />}
@@ -143,11 +154,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
             <div className="flex flex-col gap-3 animate-fade-in">
               <ApproachesSection problem={problem} />
               <HintsSection problem={problem} />
-              <CollapsibleSection emoji="🔓" title="Solution reveal">
-                <p className="text-[11px] text-gray-500 leading-relaxed">
-                  Coming in M5 — unlocks only after an Accepted submission.
-                </p>
-              </CollapsibleSection>
+              <SolutionRevealSection problem={problem} accepted={accepted} />
 
               <details className="mt-2 bg-gray-800/40 border border-gray-700/40 rounded-lg">
                 <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-gray-300 select-none">
@@ -207,3 +214,5 @@ const EmptyState: React.FC = () => (
     </p>
   </div>
 );
+
+
