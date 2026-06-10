@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './components/theme.css';
 
 /* Tailwind v4 CSS-first theme: defines our brand palette + animations. */
 :root {

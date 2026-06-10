@@ -9,7 +9,7 @@ interface ApproachesSectionProps {
 }
 
 export const ApproachesSection: React.FC<ApproachesSectionProps> = ({
-  problem,
+  problem
 }) => {
   const { status, analysis, error, refresh } = useProblemAnalysis(problem);
 
@@ -21,8 +21,7 @@ export const ApproachesSection: React.FC<ApproachesSectionProps> = ({
         : null;
 
   return (
-    <CollapsibleSection emoji="🗺️" title="Approaches" badge={badge}>
-      {status === 'idle' && (
+    <CollapsibleSection emoji="🗺️" title="Approaches" badge={badge}>      {status === 'idle' && (
         <p className="text-[11px] text-gray-500">Waiting for problem…</p>
       )}
 
@@ -65,6 +64,10 @@ export const ApproachesSection: React.FC<ApproachesSectionProps> = ({
     </CollapsibleSection>
   );
 };
+
+// ─────────────────────────────────────────────
+// Subcomponents
+// ─────────────────────────────────────────────
 
 const LoadingState: React.FC = () => (
   <div className="flex flex-col items-center justify-center gap-2 py-4">

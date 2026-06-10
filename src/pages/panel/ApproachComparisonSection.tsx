@@ -20,7 +20,7 @@ const TYPE_BG: Record<Approach['type'], string> = {
 
 export const ApproachComparisonSection: React.FC<
   ApproachComparisonSectionProps
-> = ({ problem }) => {
+> = ({ problem}) => {
   const { status, analysis } = useProblemAnalysis(problem);
 
   // Two-of-many selection. We store the user's *desired* IDs; if those IDs

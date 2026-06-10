@@ -122,8 +122,14 @@ const main = () => {
     // Small delay to let LeetCode swap the page content.
     setTimeout(loadCurrentProblem, 400);
   });
+
+  // Manual refresh escape hatch — SidePanel's refresh button dispatches this.
+  window.addEventListener('leetcode-guide:refresh', () => {
+    console.log('[LeetCode Guide] manual refresh requested');
+    loadCurrentProblem();
+  });
 };
 
-main();
 
+main();
 export {};

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/utils/helpers';
 import { clearApiKey, getApiKey, setApiKey } from '@/services/storage';
+import { DayNightToggle } from '@/components/DayNightToggle';
+import { useTheme } from '@/hooks/useTheme';
 import { Dashboard } from './Dashboard';
 
 type Tab = 'status' | 'dashboard' | 'settings';
@@ -53,10 +55,12 @@ export const PopupApp: React.FC = () => {
   const maskKey = (k: string): string =>
     k.length <= 10 ? '•'.repeat(k.length) : `${k.slice(0, 4)}${'•'.repeat(10)}${k.slice(-4)}`;
 
+  const { theme, toggle: toggleTheme } = useTheme();
+
   return (
-    <div className="w-80 flex flex-col">
+    <div data-theme={theme} className="w-80 flex flex-col bg-gray-900 text-gray-50">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-3 bg-gray-800 border-b border-gray-700">
+      <header className="flex items-center gap-2 px-4 py-3 bg-gray-800 border-b border-gray-700">
         <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-sm font-bold">
           LG
         </div>
@@ -64,7 +68,7 @@ export const PopupApp: React.FC = () => {
           <h1 className="text-sm font-bold leading-tight">LeetCode Guide</h1>
           <p className="text-[10px] text-gray-400">Learn, don't copy 🎓</p>
         </div>
-        <span className="text-[10px] text-gray-600">v0.1.0</span>
+        <DayNightToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
       {/* Status strip */}

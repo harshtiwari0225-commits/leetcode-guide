@@ -1,0 +1,63 @@
+/* Theme tokens — applied at the panel root via [data-theme="light|dark"].
+ *
+ * Dark mode: NO override — we let Tailwind v4's default gray-* palette do
+ * its thing (the bluish-slate OKLCH tones that give the panel its VS-Code feel).
+ *
+ * Light mode: remap gray-* to a warm "Claude light" cream palette so all the
+ * existing dark-mode-styled components flip cleanly without per-component
+ * refactors. Code blocks stay dark even in light mode for readability.
+ */
+
+[data-theme='light'] {
+  /* Inverted scale: gray-900 (used for backgrounds in dark mode) becomes light.
+   * Mid-range grays deepened versus the first pass so text remains readable
+   * on the warm cream background. */
+  --color-gray-50: #14130f;  /* strongest text */
+  --color-gray-100: #1f1e1a; /* primary text */
+  --color-gray-200: #2d2a24; /* headings */
+  --color-gray-300: #3d3a32; /* secondary text — strong */
+  --color-gray-400: #4d4a40; /* body text — readable on cream */
+  --color-gray-500: #6b6859; /* tertiary text, captions */
+  --color-gray-600: #8a8472; /* muted dividers, weak labels */
+  --color-gray-700: #c2bda8; /* light borders */
+  --color-gray-800: #e8e4d5; /* card / section surfaces */
+  --color-gray-900: #faf9f5; /* panel background */
+  --color-gray-950: #f0eee5; /* slightly darker surface (e.g. code-card frame) */
+
+  /* Remap Tailwind's `white` and `black` tokens too. Anything using
+     `text-white` or `bg-white` flips correctly in light mode. */
+  --color-white: #1f1e1a;
+  --color-black: #faf9f5;
+
+  --lg-shadow-panel: -4px 0 24px rgba(31, 30, 26, 0.12);
+  --lg-shadow-panel-left: 4px 0 24px rgba(31, 30, 26, 0.12);
+}
+
+/* In light mode, force the solution code block back to dark — code is
+ * dramatically more readable on a dark background even when the surrounding
+ * UI is light. */
+[data-theme='light'] pre code {
+  color: #e5e1d3;
+}
+[data-theme='light'] pre {
+  background-color: #2d2a24 !important;
+  color: #e5e1d3;
+}
+
+/* Selection color: default light-blue browser highlight washes out on cream.
+ * Use a saturated amber that reads like a real highlighter pen — pops against
+ * the cream background and keeps dark text crisp on top of it. */
+[data-theme='light'] ::selection {
+  background-color: #ffd54a;
+  color: #1a1610;
+}
+[data-theme='light'] ::-moz-selection {
+  background-color: #ffd54a;
+  color: #1a1610;
+}
+
+/* Shadow tone for dark mode — keep the deeper drop shadow. */
+[data-theme='dark'] {
+  --lg-shadow-panel: -4px 0 24px rgba(0, 0, 0, 0.45);
+  --lg-shadow-panel-left: 4px 0 24px rgba(0, 0, 0, 0.45);
+}

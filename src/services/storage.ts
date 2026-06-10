@@ -30,6 +30,12 @@ const KEYS = {
   solution: (slug: string, language: string) =>
     `solution:${slug}:${language}`,
   problemIndex: 'problem_index',
+  panelWidth: 'ui:panel_width',
+  panelHeight: 'ui:panel_height',
+  fontLevel: 'ui:font_level',
+  tabTop: 'ui:tab_top',
+  panelSide: 'ui:panel_side',
+  theme: 'ui:theme',
 } as const;
 
 // ─────────────────────────────────────────────
@@ -161,6 +167,50 @@ export const cacheSolution = async (
 ): Promise<void> => {
   await set(KEYS.solution(reveal.problemId, language), reveal);
 };
+
+// ─────────────────────────────────────────────
+// UI preferences (M7a) — panel width, collapsed sections, etc.
+// ─────────────────────────────────────────────
+
+export const getPanelWidth = (): Promise<number | null> =>
+  get<number>(KEYS.panelWidth);
+
+export const setPanelWidth = (px: number): Promise<void> =>
+  set(KEYS.panelWidth, Math.round(px));
+
+export const getPanelHeight = (): Promise<number | null> =>
+  get<number>(KEYS.panelHeight);
+
+export const setPanelHeight = (px: number): Promise<void> =>
+  set(KEYS.panelHeight, Math.round(px));
+
+export const getFontLevel = (): Promise<number | null> =>
+  get<number>(KEYS.fontLevel);
+
+export const setFontLevel = (level: number): Promise<void> =>
+  set(KEYS.fontLevel, level);
+
+export const getTabTop = (): Promise<number | null> =>
+  get<number>(KEYS.tabTop);
+
+export const setTabTop = (px: number): Promise<void> =>
+  set(KEYS.tabTop, Math.round(px));
+
+export type PanelSide = 'left' | 'right';
+
+export const getPanelSide = (): Promise<PanelSide | null> =>
+  get<PanelSide>(KEYS.panelSide);
+
+export const setPanelSideStored = (side: PanelSide): Promise<void> =>
+  set(KEYS.panelSide, side);
+
+export type ThemePreference = 'auto' | 'light' | 'dark';
+
+export const getThemePreference = (): Promise<ThemePreference | null> =>
+  get<ThemePreference>(KEYS.theme);
+
+export const setThemePreference = (theme: ThemePreference): Promise<void> =>
+  set(KEYS.theme, theme);
 
 // ─────────────────────────────────────────────
 // Bulk reset (user-triggered in M4 popup; useful for tests)

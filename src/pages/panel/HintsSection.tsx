@@ -25,7 +25,7 @@ interface HintsSectionProps {
   problem: LeetCodeProblem;
 }
 
-export const HintsSection: React.FC<HintsSectionProps> = ({ problem }) => {
+export const HintsSection: React.FC<HintsSectionProps> = ({ problem}) => {
   const { status, analysis } = useProblemAnalysis(problem);
   const [userPickedId, setUserPickedId] = useState<string | null>(null);
 
