@@ -314,6 +314,15 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         Problem text is sent only to Google Gemini using your key. We have no
         server.
       </p>
+      <button
+        type="button"
+        onClick={() =>
+          chrome.tabs.create({ url: chrome.runtime.getURL('privacy.html') })
+        }
+        className="mt-1.5 text-[10px] text-blue-400 hover:text-blue-300 underline"
+      >
+        Read the full privacy policy →
+      </button>
     </div>
   </>
 );

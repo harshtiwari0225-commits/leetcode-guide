@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy — LeetCode Guide</title>
+    <style>
+      :root {
+        --bg: #faf9f5;
+        --surface: #ffffff;
+        --border: #e5e1d3;
+        --text: #1f1e1a;
+        --text-muted: #6b6859;
+        --brand: #16a34a;
+        --code-bg: #f0eee5;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #14131a;
+          --surface: #1f1e26;
+          --border: #2d2b35;
+          --text: #f5f5f0;
+          --text-muted: #a8a499;
+          --brand: #4ade80;
+          --code-bg: #16151c;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px 24px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .logo {
+        width: 40px;
+        height: 40px;
+        background: var(--brand);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+      .updated {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin: 0 0 24px 64px;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 32px 0 8px;
+        color: var(--brand);
+      }
+      p,
+      li {
+        font-size: 14px;
+        color: var(--text);
+      }
+      ul {
+        padding-left: 20px;
+      }
+      code {
+        background: var(--code-bg);
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 12px;
+      }
+      .callout {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--brand);
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin: 16px 0;
+      }
+      .callout p:first-child {
+        margin-top: 0;
+      }
+      .callout p:last-child {
+        margin-bottom: 0;
+      }
+      footer {
+        margin-top: 48px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 12px;
+        text-align: center;
+      }
+      a {
+        color: var(--brand);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="logo">LG</div>
+        <h1>Privacy Policy</h1>
+      </header>
+      <p class="updated">LeetCode Guide · Last updated: 2026</p>
+
+      <div class="callout">
+        <p>
+          <strong>TL;DR — we don't collect anything.</strong> Everything stays in
+          your browser. We have no servers, no accounts, no analytics, no
+          tracking, no cookies. Your Gemini API calls go directly from your
+          browser to Google.
+        </p>
+      </div>
+
+      <h2>What we store, and where</h2>
+      <p>
+        All extension data is stored locally in your browser using Chrome's
+        <code>chrome.storage.local</code> API. It never leaves your device. This
+        includes:
+      </p>
+      <ul>
+        <li>Your Gemini API key (entered by you in the extension popup)</li>
+        <li>Cached problem analyses, hints, and revealed solutions</li>
+        <li>
+          Your progress: which problems you've attempted, how many hints you've
+          used, time spent, approaches explored, solved status
+        </li>
+        <li>
+          UI preferences: panel width, height, font level, side (left/right),
+          theme, hook position
+        </li>
+      </ul>
+      <p>
+        You can wipe all of this at any time from the popup's
+        <strong>📈 Dashboard</strong> tab → <strong>🗑️ Reset all progress</strong>,
+        or from <code>chrome://extensions</code> by removing the extension.
+      </p>
+
+      <h2>What we send to third parties</h2>
+      <p>
+        The extension sends the text of the LeetCode problem you're viewing
+        (title, description, examples, constraints, tags) to
+        <strong>Google Gemini</strong> via the API, using <em>your own</em> API
+        key. This is the only network call the extension makes.
+      </p>
+      <p>
+        Google's handling of this data is governed by their own
+        <a
+          href="https://ai.google.dev/gemini-api/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Gemini API Terms</a
+        >
+        and
+        <a
+          href="https://policies.google.com/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Privacy Policy</a
+        >. We do not receive, log, or have access to anything Google sees or
+        sends back.
+      </p>
+
+      <h2>What we don't do</h2>
+      <ul>
+        <li>❌ No accounts or sign-up</li>
+        <li>❌ No analytics, tracking pixels, or telemetry</li>
+        <li>❌ No third-party scripts or cookies</li>
+        <li>❌ No advertising</li>
+        <li>❌ No cloud sync between devices</li>
+        <li>❌ No reading or modifying pages other than LeetCode problem pages</li>
+        <li>❌ No sharing or selling your data — we have nothing to share</li>
+      </ul>
+
+      <h2>Permissions, explained</h2>
+      <ul>
+        <li>
+          <code>storage</code> — used to keep your API key, preferences, and
+          progress in <code>chrome.storage.local</code>.
+        </li>
+        <li>
+          <code>activeTab</code> — lets the extension know which tab you have
+          open, used by the popup to detect if you're on a LeetCode problem
+          page.
+        </li>
+        <li>
+          <code>scripting</code> — used to inject the side panel into LeetCode
+          problem pages.
+        </li>
+        <li>
+          <code>host_permissions: leetcode.com/*</code> — the extension runs
+          only on LeetCode pages. It does not run on any other website.
+        </li>
+      </ul>
+
+      <h2>Security</h2>
+      <p>
+        Your Gemini API key is stored in plain text in
+        <code>chrome.storage.local</code> — the same way Chrome stores all
+        extension data. Chrome isolates this storage per-extension; other
+        extensions cannot read it. If your machine is compromised, an attacker
+        with local access could read it. We recommend using a Gemini API key
+        with rate limits set on Google AI Studio so the cost cap is bounded
+        even in the worst case.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        The extension is suitable for use by people of any age. It does not
+        knowingly collect any data — there is nothing to collect.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        If we change how the extension handles data, we'll update this page and
+        bump the "Last updated" date. Since the extension is local-only, any
+        such change would be visible in the source code of the same version on
+        the Chrome Web Store.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Open an issue on the project's source repository or contact the
+        developer through the Chrome Web Store listing.
+      </p>
+
+      <footer>
+        LeetCode Guide is independent and not affiliated with LeetCode or
+        Google.
+      </footer>
+    </main>
+  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0b0f7ba5cda2d70',t:'MTc4MTM1MjM3MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
