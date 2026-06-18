@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "LeetCode Guide",
+  "name": "Nudge — LeetCode Guide",
   "version": "0.1.0",
-  "description": "Learn competitive programming step-by-step with AI-powered hints. No spoilers, just guidance.",
+  "description": "AI-assisted learning with educative hints for LeetCode. Progressive 5-level hints, approach comparison, post-accepted solution reveal. No spoilers.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["https://leetcode.com/*"],
   "background": {
