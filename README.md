@@ -46,7 +46,7 @@ Everything is **local-first**: your API key, your progress, your preferences sta
 ### From source
 
 ```powershell
-git clone https://github.com/<you>/leetcode-guide.git
+git clone https://github.com/harshtiwari0225-commits/leetcode-guide.git
 cd leetcode-guide
 npm install
 npm run build
