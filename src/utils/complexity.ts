@@ -20,11 +20,17 @@ const RANK_TABLE: Array<{ pattern: RegExp; rank: number; label: string }> = [
   { pattern: /^o\(\s*n\s*\^?\s*2\s*\)$/, rank: 30, label: 'O(n²)' },
   { pattern: /^o\(\s*n\s*\^?\s*2\s*log\s*n\s*\)$/, rank: 33, label: 'O(n² log n)' },
   { pattern: /^o\(\s*n\s*\^?\s*3\s*\)$/, rank: 40, label: 'O(n³)' },
-  { pattern: /^o\(\s*n\s*\^?\s*k\s*\)$/, rank: 45, label: 'O(n^k)' },
+  // Generic O(n^k) where k is a literal letter k => uncertain; bucket high.
+  { pattern: /^o\(\s*n\s*\^?\s*k\s*\)$/, rank: 55, label: 'O(n^k)' },
   { pattern: /^o\(\s*2\s*\^?\s*n\s*\)$/, rank: 60, label: 'O(2^n)' },
   { pattern: /^o\(\s*n\s*!\s*\)$/, rank: 70, label: 'O(n!)' },
   { pattern: /^o\(\s*n\s*\^?\s*n\s*\)$/, rank: 80, label: 'O(n^n)' },
 ];
+
+// Higher-degree polynomial: O(n^4), O(n^5), … O(n^9).
+// Ranked dynamically so n^5 > n^4 > n^3.
+// O(n³) is rank 40, each extra degree adds +5, so n^4=45, n^5=50, … n^9=70.
+const POLYNOMIAL_PATTERN = /^o\(\s*n\s*\^?\s*([4-9])\s*\)$/;
 
 const UNKNOWN_RANK = 999;
 
@@ -52,6 +58,14 @@ export const complexityRank = (raw: string): number => {
     .trim();
   for (const entry of RANK_TABLE) {
     if (entry.pattern.test(normalized)) return entry.rank;
+  }
+  // Fall back: try the generic polynomial pattern for O(n^4)..O(n^9).
+  // Step 2 per degree so even n^9 stays below O(2^n) rank=60.
+  // n^4=42, n^5=44, n^6=46, n^7=48, n^8=50, n^9=52.
+  const polyMatch = normalized.match(POLYNOMIAL_PATTERN);
+  if (polyMatch) {
+    const exp = Number.parseInt(polyMatch[1], 10);
+    return 40 + (exp - 3) * 2;
   }
   return UNKNOWN_RANK;
 };

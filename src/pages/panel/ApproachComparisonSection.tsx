@@ -20,7 +20,7 @@ const TYPE_BG: Record<Approach['type'], string> = {
 
 export const ApproachComparisonSection: React.FC<
   ApproachComparisonSectionProps
-> = ({ problem}) => {
+> = ({ problem }) => {
   const { status, analysis } = useProblemAnalysis(problem);
 
   // Two-of-many selection. We store the user's *desired* IDs; if those IDs
@@ -292,6 +292,16 @@ const invert = (cmp: Comparison): Comparison =>
 // Trade-off summary
 // ─────────────────────────────────────────────
 
+const labelForComparison = (
+  cmp: Comparison,
+  winnerName: string | null,
+  winnerComplexity: string,
+): string => {
+  if (cmp === 'equal') return 'Equivalent';
+  if (cmp === 'unknown') return 'Not comparable';
+  return winnerName ? `${winnerName} (${winnerComplexity})` : 'Equivalent';
+};
+
 const TradeoffSummary: React.FC<TableProps> = ({ left, right }) => {
   const timeCmp = compareComplexity(left.timeComplexity, right.timeComplexity);
   const spaceCmp = compareComplexity(left.spaceComplexity, right.spaceComplexity);
@@ -309,6 +319,15 @@ const TradeoffSummary: React.FC<TableProps> = ({ left, right }) => {
     return null;
   }, [spaceCmp, left.name, right.name]);
 
+  const fasterComplexity =
+    fasterName === left.name ? left.timeComplexity : right.timeComplexity;
+  const lessSpaceComplexity =
+    lessSpaceName === left.name ? left.spaceComplexity : right.spaceComplexity;
+
+  // Only show the interview tip when the two approaches differ meaningfully.
+  // Otherwise the sentence collapses into "start with X, then optimise toward X" — pointless.
+  const showInterviewTip = fasterName && fasterName !== simplerScore.name;
+
   return (
     <div className="bg-gray-800/30 border border-gray-700/40 rounded-md p-2.5">
       <p className="text-[10px] font-semibold text-gray-300 mb-2">
@@ -318,36 +337,32 @@ const TradeoffSummary: React.FC<TableProps> = ({ left, right }) => {
         <TradeoffRow
           emoji="⚡"
           label="Faster time"
-          value={
-            fasterName
-              ? `${fasterName} (${fasterName === left.name ? left.timeComplexity : right.timeComplexity})`
-              : 'Equivalent'
-          }
+          value={labelForComparison(timeCmp, fasterName, fasterComplexity)}
         />
         <TradeoffRow
           emoji="💾"
           label="Less memory"
-          value={
-            lessSpaceName
-              ? `${lessSpaceName} (${lessSpaceName === left.name ? left.spaceComplexity : right.spaceComplexity})`
-              : 'Equivalent'
-          }
+          value={labelForComparison(spaceCmp, lessSpaceName, lessSpaceComplexity)}
         />
         <TradeoffRow
           emoji="🎓"
           label="Easier to implement"
-          value={simplerScore.name}
+          value={
+            left.difficultyScore === right.difficultyScore
+              ? 'Equivalent'
+              : simplerScore.name
+          }
         />
       </div>
-      <p className="text-[10px] text-gray-500 leading-relaxed pt-2 mt-2 border-t border-gray-700/40">
-        💡 In interviews, start with{' '}
-        <span className="text-gray-300 font-medium">{simplerScore.name}</span> to
-        show understanding, then optimise toward{' '}
-        <span className="text-gray-300 font-medium">
-          {fasterName ?? simplerScore.name}
-        </span>{' '}
-        if time allows.
-      </p>
+      {showInterviewTip && (
+        <p className="text-[10px] text-gray-500 leading-relaxed pt-2 mt-2 border-t border-gray-700/40">
+          💡 In interviews, start with{' '}
+          <span className="text-gray-300 font-medium">{simplerScore.name}</span> to
+          show understanding, then optimise toward{' '}
+          <span className="text-gray-300 font-medium">{fasterName}</span> if
+          time allows.
+        </p>
+      )}
     </div>
   );
 };

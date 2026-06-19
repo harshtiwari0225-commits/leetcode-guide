@@ -25,6 +25,19 @@ describe('complexityRank', () => {
     expect(complexityRank('quack')).toBeGreaterThan(complexityRank('O(n!)'));
     expect(complexityRank('')).toBeGreaterThan(complexityRank('O(n!)'));
   });
+
+  it('ranks higher-degree polynomials O(n^4)..O(n^9) above O(n³)', () => {
+    expect(complexityRank('O(n^4)')).toBeGreaterThan(complexityRank('O(n^3)'));
+    expect(complexityRank('O(n^5)')).toBeGreaterThan(complexityRank('O(n^4)'));
+    expect(complexityRank('O(n^9)')).toBeGreaterThan(complexityRank('O(n^5)'));
+    // But still under exponential.
+    expect(complexityRank('O(n^9)')).toBeLessThan(complexityRank('O(2^n)'));
+  });
+
+  it('handles unicode superscript polynomials (O(n⁴))', () => {
+    expect(complexityRank('O(n⁴)')).toBe(complexityRank('O(n^4)'));
+    expect(complexityRank('O(n⁵)')).toBe(complexityRank('O(n^5)'));
+  });
 });
 
 describe('compareComplexity', () => {
@@ -47,5 +60,10 @@ describe('compareComplexity', () => {
   it('returns "unknown" when either side is unrecognised', () => {
     expect(compareComplexity('O(n)', 'mystery')).toBe('unknown');
     expect(compareComplexity('mystery', 'O(n)')).toBe('unknown');
+  });
+
+  it('correctly ranks O(n^4) vs O(n^3) as worse (the original bug)', () => {
+    expect(compareComplexity('O(n^4)', 'O(n^3)')).toBe('worse');
+    expect(compareComplexity('O(n^3)', 'O(n^4)')).toBe('better');
   });
 });

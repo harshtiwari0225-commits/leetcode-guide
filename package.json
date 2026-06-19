@@ -2,7 +2,7 @@
   "name": "leetcode-guide",
   "description": "AI-powered LeetCode learning guide — hints without spoilers.",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
