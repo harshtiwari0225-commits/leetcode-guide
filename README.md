@@ -29,7 +29,7 @@ Everything is **local-first**: your API key, your progress, your preferences sta
 
 ### Google Chrome (manual install)
 
-1. Download the latest `leetcode-guide-extension.zip` from [Releases](https://github.com/<you>/leetcode-guide/releases/latest)
+1. Download the latest `leetcode-guide-extension.zip` from [Releases](https://github.com/harshtiwari0225-commits/leetcode-guide/releases/latest)
 2. Unzip somewhere permanent on your device or alternatively save the repository link.
 3. Open `chrome://extensions`
 4. Toggle **Developer mode** on (top right)

@@ -351,7 +351,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ problem, loading, error })
         <header className="flex-shrink-0 px-4 py-3 border-b border-gray-800 bg-gray-900/95 backdrop-blur-sm">
           <div className="flex items-center gap-1.5 mb-2">
             <div className="w-6 h-6 bg-brand-500 rounded-md flex items-center justify-center text-xs font-bold">
-              LG
+              💡
             </div>
             <span className="text-xs font-bold tracking-wide text-gray-200">
               LeetCode Guide

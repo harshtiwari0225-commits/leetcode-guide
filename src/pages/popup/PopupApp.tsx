@@ -61,8 +61,8 @@ export const PopupApp: React.FC = () => {
     <div data-theme={theme} className="w-80 flex flex-col bg-gray-900 text-gray-50">
       {/* Header */}
       <header className="flex items-center gap-2 px-4 py-3 bg-gray-800 border-b border-gray-700">
-        <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-sm font-bold">
-          LG
+        <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-centre text-sm font-bold">
+          💡
         </div>
         <div className="flex-1">
           <h1 className="text-sm font-bold leading-tight">LeetCode Guide</h1>
